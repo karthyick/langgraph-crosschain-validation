@@ -8,9 +8,21 @@ import time
 from typing import Dict, Any
 from colorama import init, Fore, Style
 import traceback
+import os
+from datetime import datetime
+from abc import ABC, abstractmethod
 
 # Initialize colorama for colored output
 init(autoreset=True)
+
+# Add the project root to the sys.path to allow imports from 'src'
+# This is specifically for the health components, as the main langgraph_crosschain
+# components are expected to be importable as a package.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from src.health.status import HealthStatus, HealthMetrics
+from src.health.base_monitor import BaseHealthMonitor
+
 
 def test_imports():
     """Test if all core components can be imported"""
@@ -242,6 +254,127 @@ def test_shared_state_manager():
         traceback.print_exc()
         return False
 
+def test_health_components():
+    """Test health monitoring components: HealthStatus, HealthMetrics, BaseHealthMonitor."""
+    print(f"\n{Fore.CYAN}{'='*60}")
+    print(f"{Fore.CYAN}Testing Health Monitoring Components")
+    print(f"{Fore.CYAN}{'='*60}")
+
+    all_passed = True
+
+    # --- Test HealthStatus Enum ---
+    print(f"{Fore.BLUE}--- Testing HealthStatus Enum ---")
+    try:
+        # Acceptance Criteria: Health status enum has 4 states
+        if len(HealthStatus) == 4:
+            print(f"{Fore.GREEN}✅ HealthStatus has 4 states.")
+        else:
+            print(f"{Fore.RED}❌ HealthStatus does not have 4 states. Found {len(HealthStatus)}.")
+            all_passed = False
+
+        if HealthStatus.HEALTHY.value == "healthy":
+            print(f"{Fore.GREEN}✅ HealthStatus.HEALTHY value is 'healthy'.")
+        else:
+            print(f"{Fore.RED}❌ HealthStatus.HEALTHY value mismatch.")
+            all_passed = False
+
+        if HealthStatus.DEGRADED.value == "degraded":
+            print(f"{Fore.GREEN}✅ HealthStatus.DEGRADED value is 'degraded'.")
+        else:
+            print(f"{Fore.RED}❌ HealthStatus.DEGRADED value mismatch.")
+            all_passed = False
+
+        if HealthStatus.UNHEALTHY.value == "unhealthy":
+            print(f"{Fore.GREEN}✅ HealthStatus.UNHEALTHY value is 'unhealthy'.")
+        else:
+            print(f"{Fore.RED}❌ HealthStatus.UNHEALTHY value mismatch.")
+            all_passed = False
+
+        if HealthStatus.UNKNOWN.value == "unknown":
+            print(f"{Fore.GREEN}✅ HealthStatus.UNKNOWN value is 'unknown'.")
+        else:
+            print(f"{Fore.RED}❌ HealthStatus.UNKNOWN value mismatch.")
+            all_passed = False
+            
+    except Exception as e:
+        print(f"{Fore.RED}❌ HealthStatus enum test failed: {e}")
+        traceback.print_exc()
+        all_passed = False
+
+    # --- Test HealthMetrics Dataclass ---
+    print(f"\n{Fore.BLUE}--- Testing HealthMetrics Dataclass ---")
+    try:
+        now = datetime.utcnow()
+        metrics = HealthMetrics(
+            timestamp=now,
+            response_time_ms=150.5,
+            error_rate=0.01,
+            availability=0.999,
+            last_checked=now
+        )
+        if metrics.timestamp == now and metrics.response_time_ms == 150.5:
+            print(f"{Fore.GREEN}✅ HealthMetrics instantiated successfully without metadata.")
+        else:
+            print(f"{Fore.RED}❌ HealthMetrics instantiation failed without metadata.")
+            all_passed = False
+
+        metrics_with_meta = HealthMetrics(
+            timestamp=now,
+            response_time_ms=200.0,
+            error_rate=0.05,
+            availability=0.99,
+            last_checked=now,
+            metadata={"region": "us-east-1"}
+        )
+        if metrics_with_meta.metadata == {"region": "us-east-1"}:
+            print(f"{Fore.GREEN}✅ HealthMetrics instantiated successfully with metadata.")
+        else:
+            print(f"{Fore.RED}❌ HealthMetrics instantiation failed with metadata.")
+            all_passed = False
+
+    except Exception as e:
+        print(f"{Fore.RED}❌ HealthMetrics dataclass test failed: {e}")
+        traceback.print_exc()
+        all_passed = False
+
+    # --- Test BaseHealthMonitor Abstract Class ---
+    print(f"\n{Fore.BLUE}--- Testing BaseHealthMonitor Abstract Class ---")
+    try:
+        # Acceptance Criteria: Base monitor interface is abstract
+        # Test that it cannot be instantiated directly
+        try:
+            _ = BaseHealthMonitor()
+            print(f"{Fore.RED}❌ BaseHealthMonitor instantiated directly (should be abstract).")
+            all_passed = False
+        except TypeError as e:
+            if "Can't instantiate abstract class BaseHealthMonitor with abstract methods check_health, get_metrics" in str(e):
+                print(f"{Fore.GREEN}✅ BaseHealthMonitor correctly identified as abstract (cannot be instantiated).")
+            else:
+                print(f"{Fore.RED}❌ BaseHealthMonitor instantiation failed with unexpected error: {e}")
+                all_passed = False
+        except Exception as e:
+            print(f"{Fore.RED}❌ BaseHealthMonitor instantiation test failed with unexpected error: {e}")
+            traceback.print_exc()
+            all_passed = False
+
+        # Test if the abstract methods are indeed abstract
+        # A simple way is to check the __abstractmethods__ attribute
+        if hasattr(BaseHealthMonitor, '__abstractmethods__') and \
+           'check_health' in BaseHealthMonitor.__abstractmethods__ and \
+           'get_metrics' in BaseHealthMonitor.__abstractmethods__:
+            print(f"{Fore.GREEN}✅ check_health and get_metrics are correctly marked as abstract methods.")
+        else:
+            print(f"{Fore.RED}❌ check_health or get_metrics are not correctly marked as abstract methods.")
+            all_passed = False
+
+    except Exception as e:
+        print(f"{Fore.RED}❌ BaseHealthMonitor abstract class test failed: {e}")
+        traceback.print_exc()
+        all_passed = False
+
+    return all_passed
+
+
 def run_all_tests():
     """Run all validation tests"""
     print(f"{Fore.MAGENTA}{'='*60}")
@@ -263,6 +396,7 @@ def run_all_tests():
     results['CrossChainNode'] = test_cross_chain_node()
     results['MessageRouter'] = test_message_router()
     results['SharedStateManager'] = test_shared_state_manager()
+    results['HealthComponents'] = test_health_components()
     
     # Summary
     print(f"\n{Fore.MAGENTA}{'='*60}")

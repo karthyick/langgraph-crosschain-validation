@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Installation script for langgraph-crosschain from test.pypi
+Installation script for langgraph-crosschain from pypi
 """
 
 import subprocess
@@ -8,16 +8,16 @@ import sys
 from pathlib import Path
 
 def install_package():
-    """Install the langgraph-crosschain package from test.pypi"""
+    """Install the langgraph-crosschain package from pypi"""
     print("=" * 60)
-    print("Installing langgraph-crosschain from test.pypi...")
+    print("Installing langgraph-crosschain from pypi...")
     print("=" * 60)
     
     try:
-        # Install from test.pypi
+        # Install from pypi
         cmd = [
             sys.executable, "-m", "pip", "install",
-            "-i", "https://test.pypi.org/simple/",
+            "-i", "https://pypi.org/simple/",
             "langgraph-crosschain==0.1.2",
             "--extra-index-url", "https://pypi.org/simple/"  # For dependencies
         ]
